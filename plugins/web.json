@@ -1,0 +1,16 @@
+{
+  "name": "tmp",
+  "namespace": "tmp",
+  "init": {
+    "type": "shell",
+    "command": "python3",
+    "arguments": ["plugins/server.py"]
+  },
+  "actions": {
+    "start": {
+      "type": "network",
+      "command": "http://localhost:3000/start",
+      "arguments": []
+    }
+  }
+}
