@@ -12,6 +12,7 @@ import (
 
 type CommandType string
 
+// Different supported command types.
 const (
 	Shell   CommandType = "shell"
 	Network CommandType = "network"

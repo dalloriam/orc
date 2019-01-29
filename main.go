@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 
-	"github.com/dalloriam/orc/orc"
+	"github.com/dalloriam/orc/orc/docker"
 )
 
 func main() {
-	orc, err := orc.New("./plugins")
+	dock, err := docker.NewController(docker.Config{"./docker"})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(orc)
 
-	http.ListenAndServe("127.0.0.1:8080", nil)
+	dock.Start("elasticsearch")
+
+	fmt.Println("OK", dock)
 }
