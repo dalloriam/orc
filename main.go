@@ -12,7 +12,9 @@ func main() {
 		panic(err)
 	}
 
-	dock.Start("elasticsearch")
+	if err := dock.Start("elasticsearch"); err != nil {
+		panic(err)
+	}
 
 	fmt.Println("OK", dock)
 }
