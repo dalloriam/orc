@@ -69,6 +69,8 @@ func (s *Service) actuallyStart() error {
 		}
 	}
 
+	// TODO: Take environment, volumes & temporary into account
+
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: s.Image,
 		Cmd: s.Command,
