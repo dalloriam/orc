@@ -7,18 +7,72 @@ import (
 	"net/http"
 	"path"
 	"strings"
+
+	"github.com/dalloriam/orc/orc/docker"
+
+	"go.uber.org/zap"
 )
 
+// Orc is the root orchestrator component.
 type Orc struct {
-	cfg Config
+	cfg       Config
+	log       *zap.SugaredLogger
+	registrar func(moduleName, actionName string, fn func(actionName string, data map[string]interface{}) ([]byte, error))
 }
 
-func New(cfg Config) (*Orc, error) {
-	o := &Orc{cfg}
-	if err := o.initializePlugins(); err != nil {
+// New initializes the component according to config.
+func New(cfg Config, actionResgistrar func(moduleName, actionName string, fn func(actionName string, data map[string]interface{}) ([]byte, error))) (*Orc, error) {
+	var logger *zap.Logger
+	var err error
+	if cfg.Debug {
+		logger, err = zap.NewDevelopment()
+	} else {
+		logger, err = zap.NewProduction()
+	}
+	if err != nil {
 		return nil, err
 	}
+
+	defer logger.Sync()
+
+	sugared := logger.Sugar()
+
+	o := &Orc{
+		cfg:       cfg,
+		log:       sugared,
+		registrar: actionResgistrar,
+	}
+
+	o.log.Infof("configuration loaded")
+
+	//if err := o.initializePlugins(); err != nil {
+	//return nil, err
+	//}
+
+	if err := o.initModules(); err != nil {
+		return nil, err
+	}
+
 	return o, nil
+}
+
+func (o *Orc) initModules() error {
+	dockerMod, err := docker.NewController(o.cfg.DockerConfig)
+	if err != nil {
+		return err
+	}
+
+	modules := []Module{dockerMod}
+
+	for _, mod := range modules {
+		n := mod.Name()
+
+		for _, act := range mod.Actions() {
+			o.registrar(n, act, mod.Execute)
+		}
+	}
+
+	return nil
 }
 
 func (o *Orc) registerPlugin(pluginFile string) error {
@@ -31,16 +85,17 @@ func (o *Orc) registerPlugin(pluginFile string) error {
 	if err := json.Unmarshal(rawData, &manifest); err != nil {
 		return err
 	}
-	fmt.Println(manifest)
 
-	for actionName, command := range manifest.Actions {
+	o.log.Infof("registering plugin: %s , namespace: %s", manifest.Name, manifest.Namespace)
+
+	for actionName, command := range manifest.Actions() {
 		path := fmt.Sprintf("/%s/%s", manifest.Namespace, actionName)
-		fmt.Println("Registered action at", path)
+		o.log.Infof("handling action at: %s", path)
 		http.HandleFunc(path, command.getHTTPHandler(actionName))
 	}
 
 	if manifest.Init.Command != "" {
-		fmt.Printf("Executing init command for %s...\n", manifest.Name)
+		o.log.Infof("executing init command for plugin %s", manifest.Name)
 		if _, err := manifest.Init.Execute(nil); err != nil {
 			return err
 		}
@@ -61,7 +116,7 @@ func (o *Orc) initializePlugins() error {
 		}
 
 		pluginPath := path.Join(o.cfg.PluginsDirectory, f.Name())
-		fmt.Printf("Registering plugin from %s...", pluginPath)
+		o.log.Infof("loading plugins from: %s", pluginPath)
 		if err := o.registerPlugin(pluginPath); err != nil {
 			return err
 		}

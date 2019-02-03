@@ -69,13 +69,19 @@ func (s *Service) actuallyStart() error {
 		}
 	}
 
-	// TODO: Take environment, volumes & temporary into account
+	var envVars []string
 
+	for varName, varValue := range s.Environment {
+		envVars = append(envVars, fmt.Sprintf("%s=%s", varName, varValue))
+	}
+
+	// TODO: Take volumes & temporary into account
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: s.Image,
 		Cmd: s.Command,
 		Tty: true,
 		ExposedPorts: exposedPorts,
+		Env: envVars,
 	}, &container.HostConfig{PortBindings: portMapping}, nil, s.Name)
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {

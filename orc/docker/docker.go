@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"path"
 	"strings"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // Controller defines available docker interactions
@@ -23,6 +25,16 @@ func NewController(cfg Config) (*Controller, error) {
 	}
 
 	return cont, nil
+}
+
+// Name returns the name of the module.
+func (c *Controller) Name() string {
+	return "docker"
+}
+
+// Actions returns the actions defined by the module
+func (c *Controller) Actions() []string {
+	return []string{"start", "stop"}
 }
 
 func (c *Controller) loadServices() error {
@@ -54,6 +66,21 @@ func (c *Controller) loadServices() error {
 	}
 
 	return nil
+}
+
+// Execute executes an action.
+func (c *Controller) Execute(actionName string, data map[string]interface{}) ([]byte, error) {
+	switch actionName {
+	case "start":
+		var args StartPayload
+		if err := mapstructure.Decode(data, &args); err != nil {
+			return nil, err
+		}
+		if err := c.Start(args.ServiceName); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(map[string]interface{}{"message": "OK"})
 }
 
 // Start starts a service.
