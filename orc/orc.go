@@ -43,10 +43,6 @@ func New(cfg Config, actionResgistrar func(moduleName, actionName string, fn fun
 
 	o.log.Infof("configuration loaded")
 
-	if err := o.initializePlugins(); err != nil {
-		return nil, err
-	}
-
 	if err := o.initModules(); err != nil {
 		return nil, err
 	}
@@ -62,6 +58,13 @@ func (o *Orc) initModules() error {
 
 	modules := []Module{dockerMod}
 
+	plugins, err := o.loadPlugins()
+	if err != nil {
+		return err
+	}
+
+	modules = append(modules, plugins...)
+
 	for _, mod := range modules {
 		n := mod.Name()
 
@@ -73,38 +76,37 @@ func (o *Orc) initModules() error {
 	return nil
 }
 
-func (o *Orc) registerPlugin(pluginFile string) error {
+func (o *Orc) registerPlugin(pluginFile string) (Module, error) {
 	rawData, err := ioutil.ReadFile(pluginFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var manifest PluginManifest
 	if err := json.Unmarshal(rawData, &manifest); err != nil {
-		return err
+		return nil, err
 	}
 
-	o.log.Infof("registering plugin: %s , namespace: %s", manifest.Name(), manifest.Namespace)
-
-	for _, actionName := range manifest.Actions() {
-		o.registrar(manifest.Name(), actionName, manifest.Execute)
-	}
+	o.log.Infof("successfully loaded plugin: %s", manifest.Name())
 
 	if manifest.Init.Command != "" {
-		o.log.Infof("executing init command for plugin %s", manifest.Name())
+		o.log.Infof("executing init command for plugin: %s", manifest.Name())
 		if _, err := manifest.Init.Execute(nil); err != nil {
-			return err
+			return nil, err
 		}
+		o.log.Infof("successfully initialized plugin: %s", manifest.Name())
 	}
 
-	return nil
+	return &manifest, nil
 }
 
-func (o *Orc) initializePlugins() error {
+func (o *Orc) loadPlugins() ([]Module, error) {
 	files, err := ioutil.ReadDir(o.cfg.PluginsDirectory)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	var modules []Module
 
 	for _, f := range files {
 		if !strings.HasSuffix(f.Name(), ".json") {
@@ -112,11 +114,16 @@ func (o *Orc) initializePlugins() error {
 		}
 
 		pluginPath := path.Join(o.cfg.PluginsDirectory, f.Name())
-		o.log.Infof("loading plugins from: %s", pluginPath)
-		if err := o.registerPlugin(pluginPath); err != nil {
-			return err
+		o.log.Infof("found plugin: %s", pluginPath)
+
+		mod, err := o.registerPlugin(pluginPath)
+
+		if err != nil {
+			return nil, err
 		}
+
+		modules = append(modules, mod)
 	}
 
-	return nil
+	return modules, nil
 }

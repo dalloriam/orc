@@ -1,11 +1,13 @@
 package orc
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // PluginManifest represents a plugin declaration.
 type PluginManifest struct {
 	PluginName string             `json:"name"`
-	Namespace  string             `json:"namespace"`
 	ActionMap  map[string]Command `json:"actions"`
 	Init       Command            `json:"init"`
 }
@@ -27,7 +29,19 @@ func (p *PluginManifest) Actions() []string {
 // Execute executes the plugin.
 func (p *PluginManifest) Execute(actionName string, data map[string]interface{}) ([]byte, error) {
 	if action, ok := p.ActionMap[actionName]; ok {
-		return action.Execute(data)
+		output, err := action.Execute(data)
+		if err != nil {
+			return nil, err
+		}
+
+		response := make(map[string]interface{})
+		response["output"] = output
+
+		marshalledBytes, err := json.Marshal(response)
+		if err != nil {
+			return nil, err
+		}
+		return marshalledBytes, nil
 	}
 	return []byte{}, fmt.Errorf("no such action: %s", actionName)
 }

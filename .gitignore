@@ -1,2 +1,5 @@
 .idea/*
 .vscode/*
+plugins/*
+docker/*
+orc.json

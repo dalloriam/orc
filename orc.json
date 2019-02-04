@@ -1,7 +1,0 @@
-{
-  "debug": true,
-  "plugins_directory": "/Users/wduss/src/github.com/dalloriam/orc/plugins",
-  "docker": {
-    "service_directory": "/Users/wduss/src/github.com/dalloriam/orc/docker"
-  }
-}

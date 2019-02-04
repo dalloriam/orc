@@ -27,31 +27,35 @@ type Command struct {
 }
 
 // Execute executes a shell command and returns the output.
-func (c Command) Execute(userArguments map[string]interface{}) ([]byte, error) {
-	var totalArguments []string
-	if userArguments != nil {
-		dumpedBytes, err := json.Marshal(userArguments)
-		if err != nil {
-			return nil, err
-		}
-		totalArguments = append(c.Arguments, string(dumpedBytes))
-	} else {
-		totalArguments = c.Arguments
-	}
+func (c Command) Execute(userArguments map[string]interface{}) (map[string]interface{}, error) {
 
 	if c.Type == Shell {
+		var totalArguments []string
+		if userArguments != nil {
+			dumpedBytes, err := json.Marshal(userArguments)
+			if err != nil {
+				return nil, err
+			}
+			totalArguments = append(c.Arguments, string(dumpedBytes))
+		} else {
+			totalArguments = c.Arguments
+		}
 		cmd := exec.Command(c.Command, totalArguments...)
 		if c.Block {
-			return cmd.CombinedOutput()
+			outBytes, err := cmd.CombinedOutput()
+			if err != nil {
+				return nil, err
+			}
+			var responseData map[string]interface{}
+			if err := json.Unmarshal(outBytes, &responseData); err != nil {
+				return nil, err
+			}
+			return responseData, nil
 		}
 		return nil, cmd.Start()
 
 	} else if c.Type == Network {
-		body := map[string]interface{}{
-			"arguments": totalArguments,
-		}
-
-		bodyBytes, err := json.Marshal(body)
+		bodyBytes, err := json.Marshal(userArguments)
 		if err != nil {
 			panic(err)
 		}
@@ -70,7 +74,12 @@ func (c Command) Execute(userArguments map[string]interface{}) ([]byte, error) {
 			return nil, errors.New(string(respBody))
 		}
 
-		return respBody, nil
+		var responseData map[string]interface{}
+		if err := json.Unmarshal(respBody, &responseData); err != nil {
+			return nil, err
+		}
+
+		return responseData, nil
 
 	} else {
 		return nil, errors.New("not implemented")

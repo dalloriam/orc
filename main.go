@@ -52,6 +52,7 @@ func writeError(w io.Writer, errMsg string) {
 func registerAction(moduleName, actionName string, fn func(actionName string, data map[string]interface{}) ([]byte, error)) {
 	http.HandleFunc(fmt.Sprintf("/%s/%s", moduleName, actionName),
 		func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
 			// Read the data from the request
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -72,7 +73,6 @@ func registerAction(moduleName, actionName string, fn func(actionName string, da
 			outBytes, err := fn(actionName, parsed)
 			if err != nil {
 				if len(outBytes) > 0 {
-					fmt.Printf("ERROR - %s\n", err.Error())
 					writeError(w, string(outBytes))
 				} else {
 					writeError(w, err.Error())
