@@ -1,0 +1,12 @@
+{
+    "name": "cat",
+    "namespace": "sh",
+    "actions": {
+        "cat": {
+            "type": "shell",
+            "command": "ls",
+            "arguments": [],
+            "block": true
+        }
+    }
+}

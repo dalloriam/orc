@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
 )
 
+// CommandType regroups the supported command types.
 type CommandType string
 
 // Different supported command types.
@@ -18,6 +18,7 @@ const (
 	Network CommandType = "network"
 )
 
+// Command represents a command supported by a plugin.
 type Command struct {
 	Type      CommandType `json:"type"`
 	Command   string      `json:"command"`
@@ -25,18 +26,23 @@ type Command struct {
 	Block     bool        `json:"block"`
 }
 
+// Execute executes a shell command and returns the output.
 func (c Command) Execute(userArguments map[string]interface{}) ([]byte, error) {
-	dumpedBytes, err := json.Marshal(userArguments)
-	if err != nil {
-		return nil, err
+	var totalArguments []string
+	if userArguments != nil {
+		dumpedBytes, err := json.Marshal(userArguments)
+		if err != nil {
+			return nil, err
+		}
+		totalArguments = append(c.Arguments, string(dumpedBytes))
+	} else {
+		totalArguments = c.Arguments
 	}
-
-	totalArguments := append(c.Arguments, string(dumpedBytes))
 
 	if c.Type == Shell {
 		cmd := exec.Command(c.Command, totalArguments...)
 		if c.Block {
-			return cmd.Output()
+			return cmd.CombinedOutput()
 		}
 		return nil, cmd.Start()
 
@@ -68,46 +74,5 @@ func (c Command) Execute(userArguments map[string]interface{}) ([]byte, error) {
 
 	} else {
 		return nil, errors.New("not implemented")
-	}
-}
-
-func (c Command) getHTTPHandler(actionName string) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("[ORC] - Running action %s\n", actionName)
-
-		userData, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			panic(err)
-		}
-
-		var parsedData map[string]interface{}
-
-		if len(userData) != 0 {
-			if err := json.Unmarshal(userData, &parsedData); err != nil {
-				outMsg, err := json.Marshal(map[string]string{"error": err.Error()})
-				if err != nil {
-					panic(err)
-				}
-				w.Write(outMsg)
-				return
-			}
-		}
-
-		outputBytes, err := c.Execute(parsedData)
-
-		if err != nil {
-			outMsg, err := json.Marshal(map[string]string{"error": err.Error()})
-			if err != nil {
-				panic(err)
-			}
-			w.Write(outMsg)
-			return
-		}
-
-		outMsg, err := json.Marshal(map[string]string{"message": "OK", "output": string(outputBytes)})
-		if err != nil {
-			panic(err)
-		}
-		w.Write(outMsg)
 	}
 }

@@ -2,9 +2,7 @@ package orc
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"net/http"
 	"path"
 	"strings"
 
@@ -45,9 +43,9 @@ func New(cfg Config, actionResgistrar func(moduleName, actionName string, fn fun
 
 	o.log.Infof("configuration loaded")
 
-	//if err := o.initializePlugins(); err != nil {
-	//return nil, err
-	//}
+	if err := o.initializePlugins(); err != nil {
+		return nil, err
+	}
 
 	if err := o.initModules(); err != nil {
 		return nil, err
@@ -86,16 +84,14 @@ func (o *Orc) registerPlugin(pluginFile string) error {
 		return err
 	}
 
-	o.log.Infof("registering plugin: %s , namespace: %s", manifest.Name, manifest.Namespace)
+	o.log.Infof("registering plugin: %s , namespace: %s", manifest.Name(), manifest.Namespace)
 
-	for actionName, command := range manifest.Actions() {
-		path := fmt.Sprintf("/%s/%s", manifest.Namespace, actionName)
-		o.log.Infof("handling action at: %s", path)
-		http.HandleFunc(path, command.getHTTPHandler(actionName))
+	for _, actionName := range manifest.Actions() {
+		o.registrar(manifest.Name(), actionName, manifest.Execute)
 	}
 
 	if manifest.Init.Command != "" {
-		o.log.Infof("executing init command for plugin %s", manifest.Name)
+		o.log.Infof("executing init command for plugin %s", manifest.Name())
 		if _, err := manifest.Init.Execute(nil); err != nil {
 			return err
 		}

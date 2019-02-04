@@ -61,15 +61,22 @@ func registerAction(moduleName, actionName string, fn func(actionName string, da
 
 			// Decode the request into some dict.
 			var parsed map[string]interface{}
-			if err := json.Unmarshal(body, &parsed); err != nil {
-				writeError(w, err.Error())
-				return
+			if len(body) > 0 {
+				if err := json.Unmarshal(body, &parsed); err != nil {
+					writeError(w, err.Error())
+					return
+				}
 			}
 
 			// Fetch the response from the module & return the output.
 			outBytes, err := fn(actionName, parsed)
 			if err != nil {
-				writeError(w, err.Error())
+				if len(outBytes) > 0 {
+					fmt.Printf("ERROR - %s\n", err.Error())
+					writeError(w, string(outBytes))
+				} else {
+					writeError(w, err.Error())
+				}
 				return
 			}
 
