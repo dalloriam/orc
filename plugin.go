@@ -1,4 +1,4 @@
-package orc
+package main
 
 import (
 	"encoding/json"

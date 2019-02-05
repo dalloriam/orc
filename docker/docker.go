@@ -40,7 +40,7 @@ func (c *Controller) Actions() []string {
 func (c *Controller) loadServices() error {
 	files, err := ioutil.ReadDir(c.cfg.ServiceDirectory)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid docker services directory: %s", c.cfg.ServiceDirectory)
 	}
 
 	c.services = make(map[string]*Service)

@@ -1,4 +1,4 @@
-package orc
+package main
 
 // Module represents an abstract task handler.
 // Modules can be both a wrapped plugin or an internal module.

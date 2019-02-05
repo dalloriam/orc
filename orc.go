@@ -1,4 +1,4 @@
-package orc
+package main
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/dalloriam/orc/orc/docker"
+	"github.com/dalloriam/orc/docker"
 
 	"go.uber.org/zap"
 )

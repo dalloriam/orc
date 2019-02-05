@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 
@@ -63,7 +64,7 @@ func (s *Service) actuallyStart() error {
 		exposedPorts[exPort] = struct{}{}
 		portMapping[exPort] = []nat.PortBinding{
 			{
-				HostIP: "0.0.0.0",
+				HostIP:   "0.0.0.0",
 				HostPort: hostPort,
 			},
 		}
@@ -77,15 +78,15 @@ func (s *Service) actuallyStart() error {
 
 	// TODO: Take volumes & temporary into account
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: s.Image,
-		Cmd: s.Command,
-		Tty: true,
+		Image:        s.Image,
+		Cmd:          s.Command,
+		Tty:          true,
 		ExposedPorts: exposedPorts,
-		Env: envVars,
+		Env:          envVars,
 	}, &container.HostConfig{PortBindings: portMapping}, nil, s.Name)
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		panic(err)
+		return err
 	}
 
 	return nil

@@ -1,4 +1,4 @@
-package orc
+package main
 
 import (
 	"bytes"
@@ -55,20 +55,16 @@ func (c Command) Execute(userArguments map[string]interface{}) (map[string]inter
 		return nil, cmd.Start()
 
 	} else if c.Type == Network {
-		bodyBytes, err := json.Marshal(userArguments)
-		if err != nil {
-			panic(err)
-		}
+		// TODO: Handle error.
+		bodyBytes, _ := json.Marshal(userArguments)
 
 		resp, err := http.Post(c.Command, "application/json", bytes.NewBuffer(bodyBytes))
 		if err != nil {
 			return nil, err
 		}
 
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
+		// TODO: Handle error.
+		respBody, _ := ioutil.ReadAll(resp.Body)
 
 		if resp.StatusCode != 200 {
 			return nil, errors.New(string(respBody))
