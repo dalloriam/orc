@@ -6,6 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
 )
 
 func writeError(w io.Writer, errMsg string) {
@@ -15,8 +17,14 @@ func writeError(w io.Writer, errMsg string) {
 
 // HandleWithHTTP creates a HTTP handler for the action.
 func HandleWithHTTP(moduleName, actionName string, fn func(actionName string, data map[string]interface{}) ([]byte, error)) {
-	http.HandleFunc(fmt.Sprintf("/%s/%s", moduleName, actionName),
+	pattern := fmt.Sprintf("/%s/%s", moduleName, actionName)
+	ctxLogger := logrus.WithFields(logrus.Fields{
+		"module": moduleName,
+		"action": actionName,
+	})
+	http.HandleFunc(pattern,
 		func(w http.ResponseWriter, r *http.Request) {
+            ctxLogger.Infof("received http request on: %s", pattern)
 			w.Header().Add("Content-Type", "application/json")
 			// Read the data from the request
 			body, err := ioutil.ReadAll(r.Body)

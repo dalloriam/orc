@@ -12,14 +12,13 @@ import (
 
 // Controller defines available docker interactions
 type Controller struct {
-	cfg Config
-
+	defsDirectory string
 	services map[string]*Service
 }
 
 // NewController loads the service definitions and returns a new controller.
-func NewController(cfg Config) (*Controller, error) {
-	cont := &Controller{cfg: cfg}
+func NewController(definitionsDirectory string) (*Controller, error) {
+	cont := &Controller{defsDirectory: definitionsDirectory}
 	if err := cont.loadServices(); err != nil {
 		return nil, err
 	}
@@ -38,9 +37,9 @@ func (c *Controller) Actions() []string {
 }
 
 func (c *Controller) loadServices() error {
-	files, err := ioutil.ReadDir(c.cfg.ServiceDirectory)
+	files, err := ioutil.ReadDir(c.defsDirectory)
 	if err != nil {
-		return fmt.Errorf("invalid docker services directory: %s", c.cfg.ServiceDirectory)
+		return fmt.Errorf("invalid docker services directory: %s", c.defsDirectory)
 	}
 
 	c.services = make(map[string]*Service)
@@ -50,7 +49,7 @@ func (c *Controller) loadServices() error {
 			continue
 		}
 
-		servicePath := path.Join(c.cfg.ServiceDirectory, f.Name())
+		servicePath := path.Join(c.defsDirectory, f.Name())
 
 		data, err := ioutil.ReadFile(servicePath)
 		if err != nil {

@@ -24,6 +24,8 @@ type Command struct {
 	Command   string      `json:"command"`
 	Arguments []string    `json:"arguments"`
 	Block     bool        `json:"block"`
+
+	PluginDir string
 }
 
 // Execute executes a shell command and returns the output.
@@ -41,6 +43,11 @@ func (c Command) Execute(userArguments map[string]interface{}) (map[string]inter
 			totalArguments = c.Arguments
 		}
 		cmd := exec.Command(c.Command, totalArguments...)
+
+		if c.PluginDir != "" {
+			cmd.Dir = c.PluginDir
+		}
+
 		if c.Block {
 			outBytes, err := cmd.CombinedOutput()
 			if err != nil {

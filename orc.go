@@ -2,46 +2,33 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"net/http"
 	"path"
 	"strings"
 
 	"github.com/dalloriam/orc/docker"
-
-	"go.uber.org/zap"
+	log "github.com/sirupsen/logrus"
 )
+
+type registrarFunc func(string, string, func(string, map[string]interface{}) ([]byte, error))
 
 // Orc is the root orchestrator component.
 type Orc struct {
-	cfg       Config
-	log       *zap.SugaredLogger
-	registrar func(moduleName, actionName string, fn func(actionName string, data map[string]interface{}) ([]byte, error))
+	dockerDirectory string
+	pluginDirectory string
+
+	registrar registrarFunc
 }
 
 // New initializes the component according to config.
-func New(cfg Config, actionResgistrar func(moduleName, actionName string, fn func(actionName string, data map[string]interface{}) ([]byte, error))) (*Orc, error) {
-	var logger *zap.Logger
-	var err error
-	if cfg.Debug {
-		logger, err = zap.NewDevelopment()
-	} else {
-		logger, err = zap.NewProduction()
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	defer logger.Sync()
-
-	sugared := logger.Sugar()
-
+func New(dockerDefinitionsDirectory, pluginDirectory string, actionRegistrar registrarFunc) (*Orc, error) {
 	o := &Orc{
-		cfg:       cfg,
-		log:       sugared,
-		registrar: actionResgistrar,
+		registrar: actionRegistrar,
+		dockerDirectory: dockerDefinitionsDirectory,
+		pluginDirectory: pluginDirectory,
 	}
-
-	o.log.Infof("configuration loaded")
 
 	if err := o.initModules(); err != nil {
 		return nil, err
@@ -51,7 +38,7 @@ func New(cfg Config, actionResgistrar func(moduleName, actionName string, fn fun
 }
 
 func (o *Orc) initModules() error {
-	dockerMod, err := docker.NewController(o.cfg.DockerConfig)
+	dockerMod, err := docker.NewController(o.dockerDirectory)
 	if err != nil {
 		return err
 	}
@@ -87,21 +74,26 @@ func (o *Orc) registerPlugin(pluginFile string) (Module, error) {
 		return nil, err
 	}
 
-	o.log.Infof("successfully loaded plugin: %s", manifest.Name())
+	log.Infof("successfully loaded plugin: %s", manifest.Name())
 
 	if manifest.Init.Command != "" {
-		o.log.Infof("executing init command for plugin: %s", manifest.Name())
+		log.Infof("executing init command for plugin: %s", manifest.Name())
 		if _, err := manifest.Init.Execute(nil); err != nil {
 			return nil, err
 		}
-		o.log.Infof("successfully initialized plugin: %s", manifest.Name())
+		log.Infof("successfully initialized plugin: %s", manifest.Name())
+	}
+
+	for actionName, action := range manifest.ActionMap {
+		action.PluginDir = o.pluginDirectory
+		manifest.ActionMap[actionName] = action
 	}
 
 	return &manifest, nil
 }
 
 func (o *Orc) loadPlugins() ([]Module, error) {
-	files, err := ioutil.ReadDir(o.cfg.PluginsDirectory)
+	files, err := ioutil.ReadDir(o.pluginDirectory)
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +105,8 @@ func (o *Orc) loadPlugins() ([]Module, error) {
 			continue
 		}
 
-		pluginPath := path.Join(o.cfg.PluginsDirectory, f.Name())
-		o.log.Infof("found plugin: %s", pluginPath)
+		pluginPath := path.Join(o.pluginDirectory, f.Name())
+		log.Infof("found plugin: %s", pluginPath)
 
 		mod, err := o.registerPlugin(pluginPath)
 
@@ -126,4 +118,8 @@ func (o *Orc) loadPlugins() ([]Module, error) {
 	}
 
 	return modules, nil
+}
+
+func (o *Orc) Serve(host string, port int) error {
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)
 }
