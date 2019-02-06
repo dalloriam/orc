@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/sirupsen/logrus"
 )
 
 // Controller defines available docker interactions
@@ -23,6 +24,7 @@ func NewController(definitionsDirectory string) (*Controller, error) {
 		return nil, err
 	}
 
+	logrus.Info("docker module loaded successfully")
 	return cont, nil
 }
 

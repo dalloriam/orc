@@ -3,16 +3,16 @@ package interfaces
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
 )
 
-func writeError(w io.Writer, errMsg string) {
+func writeError(w http.ResponseWriter, errMsg string) {
 	outBytes, _ := json.Marshal(map[string]string{"error": errMsg})
 	w.Write(outBytes)
+	w.WriteHeader(http.StatusInternalServerError)
 }
 
 // HandleWithHTTP creates a HTTP handler for the action.
@@ -24,7 +24,7 @@ func HandleWithHTTP(moduleName, actionName string, fn func(actionName string, da
 	})
 	http.HandleFunc(pattern,
 		func(w http.ResponseWriter, r *http.Request) {
-            ctxLogger.Infof("received http request on: %s", pattern)
+            ctxLogger.Infof("received http request: %s", pattern)
 			w.Header().Add("Content-Type", "application/json")
 			// Read the data from the request
 			body, err := ioutil.ReadAll(r.Body)
@@ -40,6 +40,8 @@ func HandleWithHTTP(moduleName, actionName string, fn func(actionName string, da
 					writeError(w, err.Error())
 					return
 				}
+				outBytes, _ := json.Marshal(parsed)
+				ctxLogger.Debugf("action payload: %s", string(outBytes))
 			}
 
 			// Fetch the response from the module & return the output.

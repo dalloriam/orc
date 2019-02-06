@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/dalloriam/orc/docker"
+	"github.com/dalloriam/orc/version"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,6 +25,7 @@ type Orc struct {
 
 // New initializes the component according to config.
 func New(dockerDefinitionsDirectory, pluginDirectory string, actionRegistrar registrarFunc) (*Orc, error) {
+	log.Infof("[ORC %s @ %s]", version.VERSION, version.GITCOMMIT)
 	o := &Orc{
 		registrar: actionRegistrar,
 		dockerDirectory: dockerDefinitionsDirectory,
@@ -38,6 +40,7 @@ func New(dockerDefinitionsDirectory, pluginDirectory string, actionRegistrar reg
 }
 
 func (o *Orc) initModules() error {
+	log.Info("looking for modules...")
 	dockerMod, err := docker.NewController(o.dockerDirectory)
 	if err != nil {
 		return err
@@ -60,6 +63,8 @@ func (o *Orc) initModules() error {
 		}
 	}
 
+	log.Infof("module loading complete: %d modules active", len(modules))
+
 	return nil
 }
 
@@ -74,14 +79,11 @@ func (o *Orc) registerPlugin(pluginFile string) (Module, error) {
 		return nil, err
 	}
 
-	log.Infof("successfully loaded plugin: %s", manifest.Name())
-
 	if manifest.Init.Command != "" {
 		log.Infof("executing init command for plugin: %s", manifest.Name())
 		if _, err := manifest.Init.Execute(nil); err != nil {
 			return nil, err
 		}
-		log.Infof("successfully initialized plugin: %s", manifest.Name())
 	}
 
 	for actionName, action := range manifest.ActionMap {
@@ -93,6 +95,7 @@ func (o *Orc) registerPlugin(pluginFile string) (Module, error) {
 }
 
 func (o *Orc) loadPlugins() ([]Module, error) {
+	log.Info("looking for plugins...")
 	files, err := ioutil.ReadDir(o.pluginDirectory)
 	if err != nil {
 		return nil, err
@@ -117,9 +120,13 @@ func (o *Orc) loadPlugins() ([]Module, error) {
 		modules = append(modules, mod)
 	}
 
+	log.Infof("plugin search complete: %d plugins loaded", len(modules))
+
 	return modules, nil
 }
 
 func (o *Orc) Serve(host string, port int) error {
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)
+	addr := fmt.Sprintf("%s:%d", host, port)
+	log.Infof("ORC listening on %s", addr)
+	return http.ListenAndServe(addr, nil)
 }
