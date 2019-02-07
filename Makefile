@@ -45,6 +45,20 @@ md5sum $(BUILDDIR)/$(NAME)-$(1)-$(2) > $(BUILDDIR)/$(NAME)-$(1)-$(2).md5;
 sha256sum $(BUILDDIR)/$(NAME)-$(1)-$(2) > $(BUILDDIR)/$(NAME)-$(1)-$(2).sha256;
 endef
 
+define quickbuild
+CGO_ENABLED=$(CGO_ENABLED) $(GO) build \
+	-o $(BUILDDIR)/$(NAME) \
+	-a -tags "$(BUILDTAGS) static_build netgo" \
+	-installsuffix netgo ${GO_LDFLAGS_STATIC} .;
+endef
+
+
+.PHONY: static
+static: prebuild ## Builds a static executable.
+	@echo "+ $@"
+	CGO_ENABLED=$(CGO_ENABLED) $(GO) build \
+				-tags "$(BUILDTAGS) static_build" \
+				${GO_LDFLAGS_STATIC} -o $(BUILDDIR)/$(NAME) .
 
 .PHONY: clean
 clean: ## Cleanup any build binaries or packages.
@@ -54,9 +68,15 @@ clean: ## Cleanup any build binaries or packages.
 
 .PHONY: prebuild
 prebuild:
+	@echo "+ $@"
+
+.PHONY: build
+build: *.go VERSION.txt prebuild
+	@echo "+ $@"
+	$(call quickbuild)
 
 .PHONY: cross
-build: *.go VERSION.txt prebuild
+cross: *.go VERSION.txt prebuild
 	@echo "+ $@"
 	$(foreach GOOSARCH,$(GOOSARCHES), $(call buildpretty,$(subst /,,$(dir $(GOOSARCH))),$(notdir $(GOOSARCH))))
 
@@ -69,3 +89,8 @@ release: *.go VERSION.txt prebuild
 install: prebuild ## Installs the executable or package.
 	@echo "+ $@"
 	$(GO) install -a -tags "$(BUILDTAGS)" ${GO_LDFLAGS} .
+
+.PHONY: image
+image:
+	@echo "+ $@"
+	docker build --rm --force-rm -t dalloriam/orc .

@@ -28,7 +28,7 @@ type Service struct {
 }
 
 func (s *Service) isRunning() (bool, error) {
-	cli, err := client.NewClientWithOpts(client.WithVersion("1.38"))
+	cli, err := client.NewEnvClient()
 	if err != nil {
 		return false, err
 	}
@@ -49,7 +49,7 @@ func (s *Service) isRunning() (bool, error) {
 func (s *Service) actuallyStart() error {
 	fmt.Printf("starting service: %s...\n", s.Name)
 
-	cli, err := client.NewClientWithOpts(client.WithVersion("1.38"))
+	cli, err := client.NewEnvClient()
 	if err != nil {
 		return err
 	}
