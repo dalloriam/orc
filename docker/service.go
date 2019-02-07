@@ -78,14 +78,23 @@ func (s *Service) actuallyStart() error {
 		envVars = append(envVars, fmt.Sprintf("%s=%s", varName, varValue))
 	}
 
-	// TODO: Take volumes & temporary into account
+	var volumeBinds []string
+
+	for srcVol, dstVol := range s.Volumes {
+		volumeBinds = append(volumeBinds, fmt.Sprintf("%s:%s", srcVol, dstVol))
+	}
+
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image:        s.Image,
 		Cmd:          s.Command,
 		Tty:          true,
 		ExposedPorts: exposedPorts,
 		Env:          envVars,
-	}, &container.HostConfig{PortBindings: portMapping}, nil, s.Name)
+	}, &container.HostConfig{
+		PortBindings: portMapping,
+		AutoRemove:   s.Temporary,
+		Binds:        volumeBinds,
+	}, nil, s.Name)
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return err
