@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 
@@ -47,7 +49,7 @@ func (s *Service) isRunning() (bool, error) {
 }
 
 func (s *Service) actuallyStart() error {
-	fmt.Printf("starting service: %s...\n", s.Name)
+	logrus.Infof("starting service: %s", s.Name)
 
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -89,6 +91,8 @@ func (s *Service) actuallyStart() error {
 		return err
 	}
 
+	logrus.Infof("service [%s] started", s.Name)
+
 	return nil
 }
 
@@ -112,7 +116,7 @@ func (s *Service) Start() error {
 			return fmt.Errorf("failed to start service: %s", s.Name)
 		}
 	} else {
-		fmt.Println("service is already running")
+		logrus.Infof("service [%s] is already running", s.Name)
 	}
 
 	return nil
