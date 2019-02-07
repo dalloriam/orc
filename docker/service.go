@@ -15,6 +15,10 @@ import (
 	"github.com/docker/docker/client"
 )
 
+type serviceDef interface {
+	Start() error
+}
+
 // Service contains a docker service definition.
 type Service struct {
 	Name      string `json:"name,omitempty"`

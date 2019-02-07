@@ -1,0 +1,9 @@
+{
+    "name": "simple_service",
+    "image": "some_image:latest",
+    "daemon": false,
+    "temporary": true,
+    "ports": {
+        "8080: 8080
+    }
+}

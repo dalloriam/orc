@@ -94,3 +94,8 @@ install: prebuild ## Installs the executable or package.
 image:
 	@echo "+ $@"
 	docker build --rm --force-rm -t dalloriam/orc .
+
+.PHONY: test
+test:
+	@echo "+ $@"
+	go test -cover -v ./...

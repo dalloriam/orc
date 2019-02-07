@@ -14,7 +14,7 @@ import (
 // Controller defines available docker interactions
 type Controller struct {
 	defsDirectory string
-	services map[string]*Service
+	services      map[string]serviceDef
 }
 
 // NewController loads the service definitions and returns a new controller.
@@ -44,7 +44,7 @@ func (c *Controller) loadServices() error {
 		return fmt.Errorf("invalid docker services directory: %s", c.defsDirectory)
 	}
 
-	c.services = make(map[string]*Service)
+	c.services = make(map[string]serviceDef)
 
 	for _, f := range files {
 		if !strings.HasSuffix(f.Name(), ".json") {
