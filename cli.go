@@ -81,6 +81,16 @@ func (cmd *cliCommand) sendCommand(module, action string, body map[string]string
 		return nil, err
 	}
 
+	if resp.StatusCode == 404 {
+		return nil, fmt.Errorf("unknown module or action: %s/%s", module, action)
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf(
+			"unexpected error: %s - [%d]",
+			strings.TrimSpace(string(respData)), resp.StatusCode)
+	}
+
 	var structured map[string]interface{}
 	if err := json.Unmarshal(respData, &structured); err != nil {
 		return nil, err

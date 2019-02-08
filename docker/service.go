@@ -16,14 +16,14 @@ import (
 	"github.com/docker/docker/client"
 )
 
-type serviceDef interface {
+type taskDef interface {
 	IsRunning() (bool, error)
 	Start() error
 	Stop() error
 }
 
-// Service contains a docker service definition.
-type Service struct {
+// Task contains a docker service definition.
+type Task struct {
 	Name      string `json:"name,omitempty"`
 	Image     string `json:"image,omitempty"`
 	Daemon    bool   `json:"daemon,omitempty"`
@@ -34,11 +34,26 @@ type Service struct {
 	Environment map[string]string `json:"environment,omitempty"`
 	Ports       map[string]int    `json:"ports,omitempty"`
 	Volumes     map[string]string `json:"volumes,omitempty"`
+
+	client *client.Client
+}
+
+func (s *Task) initClient() (*client.Client, error) {
+	if s.client != nil {
+		return s.client, nil
+	}
+
+	client, err := client.NewEnvClient()
+	if err != nil {
+		return nil, err
+	}
+	s.client = client
+	return client, nil
 }
 
 // IsRunning returns whether the service is currently running.
-func (s *Service) IsRunning() (bool, error) {
-	cli, err := client.NewEnvClient()
+func (s *Task) IsRunning() (bool, error) {
+	cli, err := s.initClient()
 	if err != nil {
 		return false, err
 	}
@@ -57,9 +72,9 @@ func (s *Service) IsRunning() (bool, error) {
 }
 
 // Initialize pulls the docker image associated with the service, if required.
-func (s *Service) Initialize() error {
+func (s *Task) Initialize() error {
 	logrus.Debugf("ensuring image [%s] is available...", s.Image)
-	cli, err := client.NewEnvClient()
+	cli, err := s.initClient()
 	if err != nil {
 		return err
 	}
@@ -72,10 +87,10 @@ func (s *Service) Initialize() error {
 	return err
 }
 
-func (s *Service) actuallyStart() error {
+func (s *Task) actuallyStart() error {
 	logrus.Infof("starting service: %s", s.Name)
 
-	cli, err := client.NewEnvClient()
+	cli, err := s.initClient()
 	if err != nil {
 		return err
 	}
@@ -130,7 +145,7 @@ func (s *Service) actuallyStart() error {
 }
 
 // Start starts the service (if it is not already running).
-func (s *Service) Start() error {
+func (s *Task) Start() error {
 	if err := s.actuallyStart(); err != nil {
 		return err
 	}
@@ -147,9 +162,9 @@ func (s *Service) Start() error {
 }
 
 // Stop stops the service.
-func (s *Service) Stop() error {
+func (s *Task) Stop() error {
 	logrus.Infof("stopping service: %s", s.Name)
-	cli, err := client.NewEnvClient()
+	cli, err := s.initClient()
 	if err != nil {
 		return err
 	}
