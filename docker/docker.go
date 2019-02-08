@@ -39,6 +39,10 @@ func (c *Controller) Actions() []string {
 }
 
 func (c *Controller) loadServices() error {
+	ctxLog := logrus.WithFields(logrus.Fields{
+		"module": "docker",
+	})
+
 	files, err := ioutil.ReadDir(c.defsDirectory)
 	if err != nil {
 		return fmt.Errorf("invalid docker services directory: %s", c.defsDirectory)
@@ -64,6 +68,7 @@ func (c *Controller) loadServices() error {
 		}
 
 		c.services[svc.Name] = &svc
+		ctxLog.Infof("service loaded successfully: %s", svc.Name)
 	}
 
 	return nil
