@@ -68,6 +68,9 @@ func (c *Controller) loadServices() error {
 		}
 
 		c.services[svc.Name] = &svc
+		if err := svc.Initialize(); err != nil {
+			panic(err)
+		}
 		ctxLog.Infof("service loaded successfully: %s", svc.Name)
 	}
 

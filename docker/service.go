@@ -56,6 +56,22 @@ func (s *Service) IsRunning() (bool, error) {
 	return len(containers) == 1, nil
 }
 
+// Initialize pulls the docker image associated with the service, if required.
+func (s *Service) Initialize() error {
+	logrus.Debugf("ensuring image [%s] is available...", s.Image)
+	cli, err := client.NewEnvClient()
+	if err != nil {
+		return err
+	}
+
+	_, err = cli.ImagePull(context.Background(), s.Image, types.ImagePullOptions{})
+
+	if err == nil {
+		logrus.Debugf("image [%s] is available", s.Image)
+	}
+	return err
+}
+
 func (s *Service) actuallyStart() error {
 	logrus.Infof("starting service: %s", s.Name)
 
