@@ -20,6 +20,7 @@ func main() {
 	p.Version = version.VERSION
 
 	p.Commands = []cli.Command{
+		&cliCommand{},
 		&serverCommand{},
 	}
 

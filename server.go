@@ -17,10 +17,13 @@ const (
 	serverCommandHelp = "Starts the ORC server."
 
 	defaultDockerPathSuffix = ".config/dalloriam/orc/docker"
-	defaultPluginDirSuffix = ".config/dalloriam/orc/plugins"
+	defaultPluginDirSuffix  = ".config/dalloriam/orc/plugins"
+
+	serverHost = "0.0.0.0"
+	serverPort = 33000
 )
 
-func getHomeDir() (string, error){
+func getHomeDir() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
 		return "", err
@@ -37,17 +40,16 @@ func createDirIfNotExists(dirPath string) error {
 	return nil
 }
 
-
 type serverCommand struct {
 	dockerDefsDir string
-	pluginsDir string
+	pluginsDir    string
 }
 
-func (cmd *serverCommand) Name() string {return serverCommandName}
-func (cmd *serverCommand) Args() string {return serverCommandArgs}
-func (cmd *serverCommand) ShortHelp() string {return serverCommandHelp}
-func (cmd *serverCommand) LongHelp() string {return serverCommandHelp}
-func (cmd *serverCommand) Hidden() bool { return false   }
+func (cmd *serverCommand) Name() string      { return serverCommandName }
+func (cmd *serverCommand) Args() string      { return serverCommandArgs }
+func (cmd *serverCommand) ShortHelp() string { return serverCommandHelp }
+func (cmd *serverCommand) LongHelp() string  { return serverCommandHelp }
+func (cmd *serverCommand) Hidden() bool      { return false }
 
 func (cmd *serverCommand) Register(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.dockerDefsDir, "docker_defs_path", "", "Path to docker definitions directory. (defaults to ~/.config/dalloriam/orc/docker)")
@@ -86,7 +88,7 @@ func (cmd *serverCommand) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	log.Fatal(o.Serve("0.0.0.0", 8080))
+	log.Fatal(o.Serve(serverHost, serverPort))
 
 	return nil
 }

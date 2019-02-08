@@ -11,6 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	moduleName = "service"
+)
+
 // Controller defines available docker interactions
 type Controller struct {
 	defsDirectory string
@@ -24,13 +28,13 @@ func NewController(definitionsDirectory string) (*Controller, error) {
 		return nil, err
 	}
 
-	logrus.Info("docker module loaded successfully")
+	logrus.Infof("%s module loaded successfully", moduleName)
 	return cont, nil
 }
 
 // Name returns the name of the module.
 func (c *Controller) Name() string {
-	return "docker"
+	return moduleName
 }
 
 // Actions returns the actions defined by the module
@@ -40,12 +44,12 @@ func (c *Controller) Actions() []string {
 
 func (c *Controller) loadServices() error {
 	ctxLog := logrus.WithFields(logrus.Fields{
-		"module": "docker",
+		"module": moduleName,
 	})
 
 	files, err := ioutil.ReadDir(c.defsDirectory)
 	if err != nil {
-		return fmt.Errorf("invalid docker services directory: %s", c.defsDirectory)
+		return fmt.Errorf("invalid services directory: %s", c.defsDirectory)
 	}
 
 	c.services = make(map[string]serviceDef)
