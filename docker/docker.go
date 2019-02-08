@@ -80,6 +80,16 @@ func (c *Controller) Execute(actionName string, data map[string]interface{}) ([]
 		if err := c.Start(args.ServiceName); err != nil {
 			return nil, err
 		}
+	case "stop":
+		var args StartPayload
+		if err := mapstructure.Decode(data, &args); err != nil {
+			return nil, err
+		}
+		if err := c.Stop(args.ServiceName); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unknown action: %s", actionName)
 	}
 	return json.Marshal(map[string]interface{}{"message": "OK"})
 }
@@ -88,10 +98,41 @@ func (c *Controller) Execute(actionName string, data map[string]interface{}) ([]
 func (c *Controller) Start(serviceName string) error {
 	if svc, ok := c.services[serviceName]; ok {
 		// Start the service from the definition
-		if err := svc.Start(); err != nil {
+		isRunning, err := svc.IsRunning()
+
+		if err != nil {
 			return err
 		}
+
+		if !isRunning {
+			if err := svc.Start(); err != nil {
+				return err
+			}
+		} else {
+			logrus.Infof("service [%s] is already running", serviceName)
+		}
 		return nil
+	}
+
+	return fmt.Errorf("unknown service: %s", serviceName)
+}
+
+// Stop stops a service.
+func (c *Controller) Stop(serviceName string) error {
+	if svc, ok := c.services[serviceName]; ok {
+		isRunning, err := svc.IsRunning()
+
+		if err != nil {
+			return err
+		}
+
+		if !isRunning {
+			logrus.Infof("service [%s] is not running", serviceName)
+			return nil
+		}
+
+		// Stop the service from the definition
+		return svc.Stop()
 	}
 
 	return fmt.Errorf("unknown service: %s", serviceName)

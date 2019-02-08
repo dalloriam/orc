@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -16,7 +17,9 @@ import (
 )
 
 type serviceDef interface {
+	IsRunning() (bool, error)
 	Start() error
+	Stop() error
 }
 
 // Service contains a docker service definition.
@@ -33,7 +36,8 @@ type Service struct {
 	Volumes     map[string]string `json:"volumes,omitempty"`
 }
 
-func (s *Service) isRunning() (bool, error) {
+// IsRunning returns whether the service is currently running.
+func (s *Service) IsRunning() (bool, error) {
 	cli, err := client.NewEnvClient()
 	if err != nil {
 		return false, err
@@ -111,26 +115,42 @@ func (s *Service) actuallyStart() error {
 
 // Start starts the service (if it is not already running).
 func (s *Service) Start() error {
-	isRunning, err := s.isRunning()
+	if err := s.actuallyStart(); err != nil {
+		return err
+	}
+
+	isRunning, err := s.IsRunning()
+	if err != nil {
+		return err
+	}
+	if !isRunning {
+		return fmt.Errorf("failed to start service: %s", s.Name)
+	}
+
+	return nil
+}
+
+// Stop stops the service.
+func (s *Service) Stop() error {
+	logrus.Infof("stopping service: %s", s.Name)
+	cli, err := client.NewEnvClient()
+	if err != nil {
+		return err
+	}
+	filter := filters.NewArgs()
+	filter.Add("name", s.Name)
+
+	containers, err := cli.ContainerList(
+		context.Background(), types.ContainerListOptions{Filters: filter},
+	)
 	if err != nil {
 		return err
 	}
 
-	if !isRunning {
-		if err := s.actuallyStart(); err != nil {
-			return err
-		}
-
-		isRunning, err = s.isRunning()
-		if err != nil {
-			return err
-		}
-		if !isRunning {
-			return fmt.Errorf("failed to start service: %s", s.Name)
-		}
-	} else {
-		logrus.Infof("service [%s] is already running", s.Name)
+	if len(containers) != 1 {
+		return fmt.Errorf("unexpected state: %d containers found", len(containers))
 	}
 
-	return nil
+	duration := 10 * time.Second
+	return cli.ContainerStop(context.Background(), containers[0].ID, &duration)
 }
