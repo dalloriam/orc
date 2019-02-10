@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/dalloriam/orc/docker"
+	"github.com/dalloriam/orc/task"
 	"github.com/dalloriam/orc/version"
 	log "github.com/sirupsen/logrus"
 )
@@ -17,18 +17,18 @@ type registrarFunc func(string, string, func(string, map[string]interface{}) ([]
 
 // Orc is the root orchestrator component.
 type Orc struct {
-	dockerDirectory string
+	taskDirectory   string
 	pluginDirectory string
 
 	registrar registrarFunc
 }
 
 // New initializes the component according to config.
-func New(dockerDefinitionsDirectory, pluginDirectory string, actionRegistrar registrarFunc) (*Orc, error) {
+func New(taskDefinitionDirectory, pluginDirectory string, actionRegistrar registrarFunc) (*Orc, error) {
 	log.Infof("[ORC %s @ %s]", version.VERSION, version.GITCOMMIT)
 	o := &Orc{
-		registrar: actionRegistrar,
-		dockerDirectory: dockerDefinitionsDirectory,
+		registrar:       actionRegistrar,
+		taskDirectory:   taskDefinitionDirectory,
 		pluginDirectory: pluginDirectory,
 	}
 
@@ -41,12 +41,12 @@ func New(dockerDefinitionsDirectory, pluginDirectory string, actionRegistrar reg
 
 func (o *Orc) initModules() error {
 	log.Info("looking for modules...")
-	dockerMod, err := docker.NewController(o.dockerDirectory)
+	taskMod, err := task.NewController(o.taskDirectory)
 	if err != nil {
 		return err
 	}
 
-	modules := []Module{dockerMod}
+	modules := []Module{taskMod}
 
 	plugins, err := o.loadPlugins()
 	if err != nil {
@@ -125,6 +125,7 @@ func (o *Orc) loadPlugins() ([]Module, error) {
 	return modules, nil
 }
 
+// Serve starts the ORC server on the specified host & port.
 func (o *Orc) Serve(host string, port int) error {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Infof("ORC listening on %s", addr)

@@ -1,4 +1,4 @@
-package docker
+package task
 
 import (
 	"encoding/json"
@@ -137,13 +137,18 @@ func (c *Controller) getRunningTasks() []string {
 
 func (c *Controller) manageLifecycle(name string, task taskDef) {
 	// TODO: Support timeout??
-
-	c.runningTasks[name] = struct{}{}
-
 	ctxLog := logrus.WithFields(logrus.Fields{
 		"module": moduleName,
 		"task":   name,
 	})
+
+	defer func() {
+		if err := task.Cleanup(); err != nil {
+			ctxLog.Errorf("error cleaning up [%s]: %s", name, err.Error())
+		}
+	}()
+
+	c.runningTasks[name] = struct{}{}
 
 	isRunning, err := task.IsRunning()
 	if err != nil {
@@ -152,24 +157,37 @@ func (c *Controller) manageLifecycle(name string, task taskDef) {
 
 	if !isRunning {
 		if err := task.Start(); err != nil {
-			// TODO: Error handling?
-			panic(err)
+			ctxLog.Errorf("error starting task: %s", err.Error())
+			return
 		}
+		ctxLog.Info("task started successfully")
 	}
 
-	ctxLog.Info("task started successfully")
 	isRunning = true
 
 	for isRunning {
 		isRunning, err = task.IsRunning()
 		if err != nil {
-			panic(err)
+			ctxLog.Errorf("error fetching status: %s", err.Error())
+			return
 		}
 
 		time.Sleep(time.Duration(500 * time.Millisecond))
 	}
 
 	ctxLog.Info("task complete")
+
+	nextTasks, err := task.NextTasks()
+	if err != nil {
+		ctxLog.Errorf("error fetching next tasks: %s", err.Error())
+	}
+
+	for _, taskName := range nextTasks {
+		if err := c.Start(taskName); err != nil {
+			ctxLog.Errorf("error starting connex task [%s]: %s", taskName, err.Error())
+		}
+	}
+
 	delete(c.runningTasks, name)
 }
 
@@ -203,7 +221,6 @@ func (c *Controller) Start(taskName string) error {
 func (c *Controller) Stop(taskName string) error {
 	if task, ok := c.tasks[taskName]; ok {
 		isRunning, err := task.IsRunning()
-
 		if err != nil {
 			return err
 		}
@@ -213,7 +230,6 @@ func (c *Controller) Stop(taskName string) error {
 			return nil
 		}
 
-		// Stop the task from the definition
 		return task.Stop()
 	}
 

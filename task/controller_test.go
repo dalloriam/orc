@@ -1,10 +1,10 @@
-package docker_test
+package task_test
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/dalloriam/orc/docker"
+	"github.com/dalloriam/orc/task"
 	"github.com/sirupsen/logrus"
 )
 
@@ -13,7 +13,7 @@ func init() {
 }
 
 const (
-	expectedControllerName = "docker"
+	expectedControllerName = "task"
 )
 
 var expectedActions = []string{"start", "stop"}
@@ -44,7 +44,7 @@ func TestNewController(t *testing.T) {
 	}
 
 	for _, tCase := range cases {
-		controller, err := docker.NewController(tCase.testDataDir)
+		controller, err := task.NewController(tCase.testDataDir)
 
 		if tCase.wantErr {
 			if err == nil {
