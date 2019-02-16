@@ -1,5 +1,4 @@
 .idea/*
 .vscode/*
 dist/*
-plugins/*
 orc.json
