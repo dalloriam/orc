@@ -1,0 +1,32 @@
+language: go
+sudo: true
+notifications:
+  email: true
+go:
+  - 1.11.x
+before_install:
+  - go get golang.org/x/lint/golint
+jobs:
+  include:
+    - script: make all
+    - stage: Run Test Coverage
+      script: make cover
+    - stage: Build Release
+      script:
+        - make release
+        - echo "Deploying to GitHub releases ..."
+
+      deploy:
+        provider: releases
+        api_key:
+          secure: Rq7twnmUAkgY3dXWswo0/FujLvKi0/MGvvEUj3ntd5TAj0M87onUbfZ9E1UGhdg3gqSjKUDIGw42HcYJCgb32gIeMvqjY+RmF0B6QCkqQKPIV+rJVkB5f97MJ3z8XML+LTZ8qYKi53ZC1JuD715o8FXMergGXwrifrzELjJgDbqh6Euss9Vq9n71TABOB3Nt6UfBzvBPmDpM2qTMHHqcLaSQ1VPLbPZCB1ZM0mFhSRwXfJxRaCMe6QC+LqYg37Zsd0b8dFoFbKaTrDcWgW0sKGLxNDxd+XvnehBMIoLcFVHF1Mabkk4V+xS+6yhopHejOpX7KdzGRB05xW5I4A02mAduqNTefh2wRfpeNS3SEuOToCJMF6QgtXzrTeO8CV8b6a242AZuTEV3zqZVlgANaBoxdAJU+liBpnkuInrllcwQkzCl7rXY1Odnmm4Q8s84Iomn26oFMfxw+OsyCFd50xTwN5oeG48saF6YFquz7Zu1RcND0uuYl0lX3T1SWTiLAJS5cRNvmqSMnbJWD3iKazdHJo3n1wQMqJG6gFVm3ssvuOApCB41R+fB8rU9RaxsBxTfP/Nw6swaJMsk5/TiugXDnI9dqObsyYuVwaib4TODP9IzpKOUtxlxaAbmdzUa+p33MUvRWkSDd6ot6E2SswPZ8LwfrywozwXhl3IXr50=
+        file: 
+          - dist/orc-linux-amd64
+          - dist/orc-linux-amd64.md5
+          - dist/orc-linux-amd64.sha256
+          - dist/orc-darwin-amd64
+          - dist/orc-darwin-amd64.md5
+          - dist/orc-darwin-amd64.sha256
+        skip_cleanup: true
+        on:
+          tags: true

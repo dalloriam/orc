@@ -1,3 +1,2 @@
-# ORC
+# ORC (v0.1.8)
 ## A ridiculously over-engineered personal task runner.
-## Current version: v0.1.8

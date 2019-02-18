@@ -16,7 +16,7 @@ ifeq ($(GITCOMMIT),)
     GITCOMMIT := ${GITHUB_SHA}
 endif
 
-GOOSARCHES = linux/amd64 darwin/amd64 windows/amd64
+GOOSARCHES = linux/amd64 darwin/amd64
 BUILDTAGS :=
 
 
@@ -107,6 +107,11 @@ bump-version: ## Bump the version in the version file. Set BUMP to [ patch | maj
 	git add VERSION.txt README.md
 	git commit -vsam "Bump version to $(NEW_VERSION)"
 	@echo "Run make tag to create and push the tag for new version $(NEW_VERSION)"
+
+.PHONY: tag
+tag: ## Create a new git tag to prepare to build a release.
+	git tag -sa $(VERSION) -m "$(VERSION)"
+	@echo "Run git push origin $(VERSION) to push your new tag to GitHub and trigger a travis build."
 
 .PHONY: test
 test:
