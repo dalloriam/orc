@@ -1,0 +1,11 @@
+{
+  "name": "local",
+  "actions": {
+    "notify": {
+      "type": "shell",
+      "command": "./orc_local",
+      "arguments": ["notify"],
+      "block": true
+    }
+  }
+}
