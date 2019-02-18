@@ -8,19 +8,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type inputData struct {
-	Title   string `json:"title"`
-	Message string `json:"message"`
-}
-
 func main() {
 	// Create a new cli program.
 	p := cli.NewProgram()
-	p.Name = "local"
-	p.Description = "Local Host Interface Plugin for ORC"
+	p.Name = "datahose"
+	p.Description = "Datahose plugin for ORC"
 
 	p.Commands = []cli.Command{
-		&notifyCommand{},
 		&manifestCommand{},
 	}
 
