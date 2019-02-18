@@ -1,6 +1,6 @@
 {
     "name": "simple_service",
-    "image": "some_image:latest",
+    "image": "hello-world:latest",
     "daemon": false,
     "temporary": true,
     "environment": {

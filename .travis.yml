@@ -8,9 +8,8 @@ before_install:
   - go get golang.org/x/lint/golint
 jobs:
   include:
-    - script: make all
-    - stage: Run Test Coverage
-      script: make cover
+    - stage: Run Tests
+      script: make test
     - stage: Build Release
       script:
         - make release

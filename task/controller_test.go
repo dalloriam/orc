@@ -44,7 +44,7 @@ func TestNewController(t *testing.T) {
 	}
 
 	for _, tCase := range cases {
-		controller, err := task.NewController(tCase.testDataDir)
+		controller, err := task.NewController(tCase.testDataDir, false)
 
 		if tCase.wantErr {
 			if err == nil {

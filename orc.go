@@ -41,7 +41,7 @@ func New(taskDefinitionDirectory, pluginDirectory string, actionRegistrar regist
 
 func (o *Orc) initModules() error {
 	log.Info("looking for modules...")
-	taskMod, err := task.NewController(o.taskDirectory)
+	taskMod, err := task.NewController(o.taskDirectory, true)
 	if err != nil {
 		return err
 	}

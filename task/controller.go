@@ -22,13 +22,16 @@ type Controller struct {
 	tasks         map[string]taskDef
 
 	runningTasks map[string]struct{}
+
+	shouldInitializeTasks bool
 }
 
 // NewController loads the task definitions and returns a new controller.
-func NewController(definitionsDirectory string) (*Controller, error) {
+func NewController(definitionsDirectory string, initializeTasks bool) (*Controller, error) {
 	cont := &Controller{
-		defsDirectory: definitionsDirectory,
-		runningTasks:  make(map[string]struct{}),
+		defsDirectory:         definitionsDirectory,
+		runningTasks:          make(map[string]struct{}),
+		shouldInitializeTasks: initializeTasks,
 	}
 	if err := cont.loadTasks(); err != nil {
 		return nil, err
@@ -78,8 +81,13 @@ func (c *Controller) loadTasks() error {
 		}
 
 		c.tasks[task.Name] = &task
-		if err := task.Initialize(); err != nil {
-			return err
+
+		if c.shouldInitializeTasks {
+			if err := task.Initialize(); err != nil {
+				return err
+			}
+		} else {
+			ctxLog.Warn("skipping task initialization as requested in controller configuration.")
 		}
 		ctxLog.Infof("task loaded successfully: %s", task.Name)
 
