@@ -1,4 +1,4 @@
-package main
+package plugins
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 type PluginManifest struct {
 	PluginName string             `json:"name"`
 	ActionMap  map[string]Command `json:"actions"`
-	Init       Command            `json:"init"`
+	Init       Command            `json:"init,omitempty"`
 }
 
 // Name returns the name of the plugin.

@@ -1,4 +1,4 @@
-package main
+package plugins
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ type Command struct {
 	Arguments []string    `json:"arguments"`
 	Block     bool        `json:"block"`
 
-	PluginDir string
+	PluginDir string `json:"plugin_dir,omitempty"`
 }
 
 // Execute executes a shell command and returns the output.

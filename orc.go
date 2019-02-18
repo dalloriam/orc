@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os/exec"
 	"path"
-	"strings"
 
+	"github.com/dalloriam/orc/plugins"
 	"github.com/dalloriam/orc/task"
 	"github.com/dalloriam/orc/version"
 	log "github.com/sirupsen/logrus"
@@ -69,12 +70,16 @@ func (o *Orc) initModules() error {
 }
 
 func (o *Orc) registerPlugin(pluginFile string) (Module, error) {
-	rawData, err := ioutil.ReadFile(pluginFile)
+	// Fetch the manifest from the executable.
+	cmd := exec.Command(pluginFile, "manifest")
+	cmd.Dir = o.pluginDirectory
+
+	rawData, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
 
-	var manifest PluginManifest
+	var manifest plugins.PluginManifest
 	if err := json.Unmarshal(rawData, &manifest); err != nil {
 		return nil, err
 	}
@@ -91,6 +96,8 @@ func (o *Orc) registerPlugin(pluginFile string) (Module, error) {
 		manifest.ActionMap[actionName] = action
 	}
 
+	log.Debugf("successfully loaded plugin: %s", manifest.Name())
+
 	return &manifest, nil
 }
 
@@ -104,10 +111,6 @@ func (o *Orc) loadPlugins() ([]Module, error) {
 	var modules []Module
 
 	for _, f := range files {
-		if !strings.HasSuffix(f.Name(), ".json") {
-			continue
-		}
-
 		pluginPath := path.Join(o.pluginDirectory, f.Name())
 		log.Infof("found plugin: %s", pluginPath)
 

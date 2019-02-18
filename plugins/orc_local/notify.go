@@ -47,7 +47,11 @@ func (cmd *notifyCommand) linuxNotify(payload *notifyPayload) error {
 }
 
 func (cmd *notifyCommand) darwinNotify(payload *notifyPayload) error {
-	fmt.Println("Unsupported")
+	cmdObj := exec.Command("/usr/bin/osascript", "-e", fmt.Sprintf("display notification \"%s\" with title \"%s\"", payload.Message, payload.Title))
+	output, err := cmdObj.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error sending notification: %s", output)
+	}
 	return nil
 }
 

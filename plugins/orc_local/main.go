@@ -26,6 +26,7 @@ func main() {
 
 	p.Commands = []cli.Command{
 		&notifyCommand{},
+		&manifestCommand{},
 	}
 
 	p.FlagSet = flag.NewFlagSet("orc", flag.ExitOnError)
