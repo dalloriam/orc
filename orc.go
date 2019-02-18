@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/dalloriam/orc/management"
 	"github.com/dalloriam/orc/plugins"
 	"github.com/dalloriam/orc/task"
 	"github.com/dalloriam/orc/version"
@@ -47,7 +48,9 @@ func (o *Orc) initModules() error {
 		return err
 	}
 
-	modules := []Module{taskMod}
+	managementMod := management.NewModule()
+
+	modules := []Module{taskMod, managementMod}
 
 	plugins, err := o.loadPlugins()
 	if err != nil {
@@ -61,6 +64,7 @@ func (o *Orc) initModules() error {
 
 		for _, act := range mod.Actions() {
 			o.registrar(n, act, mod.Execute)
+			managementMod.RegisterAction(n, act)
 		}
 	}
 
