@@ -29,7 +29,7 @@ func getConfig() (config, error) {
 		return config{}, err
 	}
 
-	if _, err := os.Stat("/path/to/whatever"); err != nil {
+	if _, err := os.Stat(cfgPath); err != nil {
 		return config{}, err
 	}
 

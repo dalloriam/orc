@@ -1,5 +1,12 @@
 package hose
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
 // Client represents a datahose client.
 type Client struct {
 	cfg config
@@ -16,6 +23,27 @@ func NewClient() (*Client, error) {
 }
 
 // Push pushes an event to the datahose.
-func (c *Client) Push(eventKey string, body map[string]interface{}) error {
+func (c *Client) Push(payload Payload) error {
+	outBytes, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", c.cfg.ServiceHost, bytes.NewBuffer(outBytes))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("UPW %s %s", c.cfg.Email, c.cfg.Password)) // TODO: Support using Firebase auth directly instead of delegating auth to the hose.
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
 	return nil
 }

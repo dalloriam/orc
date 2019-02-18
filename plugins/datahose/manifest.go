@@ -28,7 +28,7 @@ func (cmd *manifestCommand) Run(ctx context.Context, args []string) error {
 	p := plugins.PluginManifest{
 		PluginName: "datahose",
 		ActionMap: map[string]plugins.Command{
-			"notify": plugins.Command{
+			"push": plugins.Command{
 				Type:      "shell",
 				Command:   "./datahose",
 				Arguments: []string{"push"},
