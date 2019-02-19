@@ -103,7 +103,7 @@ bump-version: ## Bump the version in the version file. Set BUMP to [ patch | maj
 	@echo "Bumping VERSION.txt from $(VERSION) to $(NEW_VERSION)"
 	echo $(NEW_VERSION) > VERSION.txt
 	@echo "Updating links to download binaries in README.md"
-	sed -i "" s/$(VERSION)/$(NEW_VERSION)/g README.md
+	sed -i s/$(VERSION)/$(NEW_VERSION)/g README.md
 	git add VERSION.txt README.md
 	git commit -vsam "Bump version to $(NEW_VERSION)"
 	@echo "Run make tag to create and push the tag for new version $(NEW_VERSION)"
