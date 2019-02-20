@@ -14,6 +14,9 @@ import (
 
 const (
 	moduleName = "task"
+
+	// MaintenanceLoopFrequencyMs is the frequency at which we check for changes in task status.
+	MaintenanceLoopFrequencyMs = 500
 )
 
 // Controller defines available docker interactions
@@ -21,7 +24,7 @@ type Controller struct {
 	defsDirectory string
 	tasks         map[string]taskDef
 
-	runningTasks map[string]struct{}
+	RunningTasks map[string]chan bool
 
 	shouldInitializeTasks bool
 }
@@ -30,7 +33,7 @@ type Controller struct {
 func NewController(definitionsDirectory string, initializeTasks bool) (*Controller, error) {
 	cont := &Controller{
 		defsDirectory:         definitionsDirectory,
-		runningTasks:          make(map[string]struct{}),
+		RunningTasks:          make(map[string]chan bool),
 		shouldInitializeTasks: initializeTasks,
 	}
 	if err := cont.loadTasks(); err != nil {
@@ -51,6 +54,14 @@ func (c *Controller) Actions() []string {
 	return []string{"start", "stop", "running"}
 }
 
+// AddTask adds the task to the controller.
+func (c *Controller) AddTask(name string, t taskDef) {
+	if c.tasks == nil {
+		c.tasks = make(map[string]taskDef)
+	}
+	c.tasks[name] = t
+}
+
 func (c *Controller) loadTasks() error {
 	ctxLog := logrus.WithFields(logrus.Fields{
 		"module": moduleName,
@@ -60,8 +71,6 @@ func (c *Controller) loadTasks() error {
 	if err != nil {
 		return fmt.Errorf("invalid task directory: %s", c.defsDirectory)
 	}
-
-	c.tasks = make(map[string]taskDef)
 
 	for _, f := range files {
 		if !strings.HasSuffix(f.Name(), ".json") {
@@ -80,7 +89,7 @@ func (c *Controller) loadTasks() error {
 			return err
 		}
 
-		c.tasks[task.Name] = &task
+		c.AddTask(task.Name, &task)
 
 		if c.shouldInitializeTasks {
 			if err := task.Initialize(); err != nil {
@@ -137,66 +146,65 @@ func (c *Controller) Execute(actionName string, data map[string]interface{}) ([]
 
 func (c *Controller) getRunningTasks() []string {
 	tasks := []string{}
-	for k := range c.runningTasks {
+	for k := range c.RunningTasks {
 		tasks = append(tasks, k)
 	}
 	return tasks
 }
 
+// Manages the lifecycle (status & cleanup) of a running task
 func (c *Controller) manageLifecycle(name string, task taskDef) {
-	// TODO: Support timeout??
-	ctxLog := logrus.WithFields(logrus.Fields{
-		"module": moduleName,
-		"task":   name,
-	})
+	if _, ok := c.RunningTasks[name]; ok {
+		// If this is true, task is already managed by another goroutine.
+		return
+	}
 
-	defer func() {
-		if err := task.Cleanup(); err != nil {
-			ctxLog.Errorf("error cleaning up [%s]: %s", name, err.Error())
+	outChan := make(chan bool)
+	c.RunningTasks[name] = outChan
+
+	go func() {
+		ctxLog := logrus.WithFields(logrus.Fields{
+			"module": moduleName,
+			"task":   name,
+		})
+
+		// No matter how we exit, cleanup must be performed.
+		defer func() {
+			close(outChan)
+			delete(c.RunningTasks, name)
+
+			if err := task.Cleanup(); err != nil {
+				ctxLog.Errorf("error cleaning up [%s]: %s", name, err.Error())
+			}
+		}()
+
+		// Assume the current service is running
+		isRunning := true
+		var err error
+
+		for isRunning {
+			isRunning, err = task.IsRunning()
+			if err != nil {
+				ctxLog.Errorf("error fetching status: %s", err.Error())
+				return
+			}
+
+			time.Sleep(time.Duration(MaintenanceLoopFrequencyMs * time.Millisecond))
+		}
+
+		ctxLog.Info("task complete")
+
+		nextTasks, err := task.NextTasks()
+		if err != nil {
+			ctxLog.Errorf("error fetching next tasks: %s", err.Error())
+		}
+
+		for _, taskName := range nextTasks {
+			if err := c.Start(taskName); err != nil {
+				ctxLog.Errorf("error starting connex task [%s]: %s", taskName, err.Error())
+			}
 		}
 	}()
-
-	c.runningTasks[name] = struct{}{}
-
-	isRunning, err := task.IsRunning()
-	if err != nil {
-		panic(err)
-	}
-
-	if !isRunning {
-		if err := task.Start(); err != nil {
-			ctxLog.Errorf("error starting task: %s", err.Error())
-			return
-		}
-		ctxLog.Info("task started successfully")
-	}
-
-	isRunning = true
-
-	for isRunning {
-		isRunning, err = task.IsRunning()
-		if err != nil {
-			ctxLog.Errorf("error fetching status: %s", err.Error())
-			return
-		}
-
-		time.Sleep(time.Duration(500 * time.Millisecond))
-	}
-
-	ctxLog.Info("task complete")
-
-	nextTasks, err := task.NextTasks()
-	if err != nil {
-		ctxLog.Errorf("error fetching next tasks: %s", err.Error())
-	}
-
-	for _, taskName := range nextTasks {
-		if err := c.Start(taskName); err != nil {
-			ctxLog.Errorf("error starting connex task [%s]: %s", taskName, err.Error())
-		}
-	}
-
-	delete(c.runningTasks, name)
 }
 
 // Start runs the container as task.
@@ -204,7 +212,6 @@ func (c *Controller) Start(taskName string) error {
 	if task, ok := c.tasks[taskName]; ok {
 		// Start the task from the definition
 		isRunning, err := task.IsRunning()
-
 		if err != nil {
 			return err
 		}
@@ -218,7 +225,7 @@ func (c *Controller) Start(taskName string) error {
 		}
 
 		// Run the task
-		go c.manageLifecycle(taskName, task)
+		c.manageLifecycle(taskName, task)
 		return nil
 	}
 

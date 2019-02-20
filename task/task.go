@@ -3,12 +3,14 @@ package task
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 
 	"github.com/docker/docker/api/types/filters"
@@ -26,6 +28,17 @@ type taskDef interface {
 	NextTasks() ([]string, error)
 }
 
+type dockerClient interface {
+	ImagePull(ctx context.Context, ref string, options types.ImagePullOptions) (io.ReadCloser, error)
+
+	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error)
+	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error
+	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
+	ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error
+}
+
 // Task contains a docker task definition.
 type Task struct {
 	Name   string `json:"name,omitempty"`
@@ -41,19 +54,19 @@ type Task struct {
 	OnSuccess []string `json:"on_success,omitempty"`
 	OnFailure []string `json:"on_failure,omitempty"`
 
-	client *client.Client
+	Client dockerClient
 }
 
-func (s *Task) initClient() (*client.Client, error) {
-	if s.client != nil {
-		return s.client, nil
+func (s *Task) initClient() (dockerClient, error) {
+	if s.Client != nil {
+		return s.Client, nil
 	}
 
 	client, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
 	}
-	s.client = client
+	s.Client = client
 	return client, nil
 }
 
