@@ -174,6 +174,10 @@ func (s *Task) actuallyStart() error {
 		Binds:        volumeBinds,
 	}, nil, s.Name)
 
+	if err != nil {
+		return err
+	}
+
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}

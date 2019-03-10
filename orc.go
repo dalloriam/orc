@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/dalloriam/orc/keyval"
 	"github.com/dalloriam/orc/management"
 	"github.com/dalloriam/orc/plugins"
 	"github.com/dalloriam/orc/task"
@@ -50,7 +51,9 @@ func (o *Orc) initModules() error {
 
 	managementMod := management.NewModule()
 
-	modules := []Module{taskMod, managementMod}
+	keyValMod := keyval.NewModule()
+
+	modules := []Module{taskMod, managementMod, keyValMod}
 
 	plugins, err := o.loadPlugins()
 	if err != nil {
@@ -132,9 +135,18 @@ func (o *Orc) loadPlugins() ([]Module, error) {
 	return modules, nil
 }
 
+func (o *Orc) healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	x, _ := json.Marshal(map[string]string{"health": "OK"})
+
+	w.Write(x)
+}
+
 // Serve starts the ORC server on the specified host & port.
 func (o *Orc) Serve(host string, port int) error {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Infof("ORC listening on %s", addr)
+	http.HandleFunc("/", o.healthCheck)
 	return http.ListenAndServe(addr, nil)
 }

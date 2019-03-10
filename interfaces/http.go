@@ -24,7 +24,7 @@ func HandleWithHTTP(moduleName, actionName string, fn func(actionName string, da
 	})
 	http.HandleFunc(pattern,
 		func(w http.ResponseWriter, r *http.Request) {
-            ctxLogger.Infof("received http request: %s", pattern)
+			ctxLogger.Infof("received http request: %s", pattern)
 			w.Header().Add("Content-Type", "application/json")
 			// Read the data from the request
 			body, err := ioutil.ReadAll(r.Body)
