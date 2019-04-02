@@ -29,6 +29,7 @@ type taskDef interface {
 }
 
 type dockerClient interface {
+	ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error)
 	ImagePull(ctx context.Context, ref string, options types.ImagePullOptions) (io.ReadCloser, error)
 
 	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error)
@@ -111,6 +112,28 @@ func (s *Task) IsRunning() (bool, error) {
 	return len(containers) == 1, nil
 }
 
+func (s *Task) imageExists(imageName string) (bool, error) {
+	cli, err := s.initClient()
+	if err != nil {
+		return false, err
+	}
+
+	res, err := cli.ImageList(context.Background(), types.ImageListOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	for _, r := range res {
+		for _, tag := range r.RepoTags {
+			if tag == imageName {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // Initialize pulls the docker image associated with the service, if required.
 func (s *Task) Initialize() error {
 	logrus.Debugf("ensuring image [%s] is available...", s.Image)
@@ -119,7 +142,14 @@ func (s *Task) Initialize() error {
 		return err
 	}
 
-	_, err = cli.ImagePull(context.Background(), s.Image, types.ImagePullOptions{})
+	exists, err := s.imageExists(s.Image)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		_, err = cli.ImagePull(context.Background(), s.Image, types.ImagePullOptions{})
+	}
 
 	if err == nil {
 		logrus.Debugf("image [%s] is available", s.Image)
